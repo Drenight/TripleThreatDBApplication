@@ -41,11 +41,28 @@ LOAD DATA INFILE '/Users/liuboyao/Assignments23Spring/DataBase/A2/Provisional_CO
 
 DROP TABLE IF EXISTS `Covid_Death_By_Sex_And_Age`;
 CREATE TABLE Covid_Death_By_Sex_And_Age AS
-    select endDate, state, sex, ageGroup, covid19Death, totalDeath, pneumoniaDeath, pneumoniaAndCovid19Death, influenzaDeaths, tripleThreatTotalDeath
+    select endDate, state, sex,
+           SUM(covid19Death) AS covid19Death,
+           SUM(totalDeath) AS totalDeath,
+           SUM(pneumoniaDeath) AS pneumoniaDeath,
+           SUM(pneumoniaAndCovid19Death) AS pneumoniaAndCovid19Death,
+           SUM(influenzaDeaths) AS influenzaDeaths,
+           SUM(tripleThreatTotalDeath) AS tripleThreatTotalDeath
     from ori_Covid_Death_By_Sex_And_Age
-    where groupMode = 'By Total'
+    where groupMode = 'By Month'
         and state != 'United States'
-    order by date DESC
+        and (sex = 'Male' or sex = 'Female')
+    GROUP BY endDate, state, sex
 ;
+
+ALTER TABLE `Covid_Death_By_Sex_And_Age`
+    ADD PRIMARY KEY (endDate, state, sex),
+    MODIFY COLUMN covid19Death INT,
+    MODIFY COLUMN totalDeath INT,
+    MODIFY COLUMN pneumoniaDeath INT,
+    MODIFY COLUMN pneumoniaAndCovid19Death INT,
+    MODIFY COLUMN influenzaDeaths INT,
+    MODIFY COLUMN tripleThreatTotalDeath INT;
+
 DROP TABLE IF EXISTS `ori_Covid_Death_By_Sex_And_Age`;
 
