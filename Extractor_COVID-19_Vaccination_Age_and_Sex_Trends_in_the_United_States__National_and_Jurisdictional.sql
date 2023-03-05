@@ -36,7 +36,23 @@ DROP TABLE IF EXISTS `Covid_Vaccination_By_Sex_And_Age`;
 CREATE TABLE Covid_Vaccination_By_Sex_And_Age AS
     select *
     from ori_Covid_Vaccination_By_Sex_And_Age
-    order by date DESC
+    where location != 'US'
+        and demographicCategory like 'Sex%'
+        and demographicCategory != 'Sex_Unknown'
 ;
+
+ALTER TABLE `Covid_Vaccination_By_Sex_And_Age`
+    MODIFY COLUMN location CHAR(30) NOT NULL DEFAULT '',
+    ADD PRIMARY KEY (date, location, demographicCategory),
+    RENAME COLUMN census TO censusForVaccination;
+
+UPDATE Covid_Vaccination_By_Sex_And_Age
+    INNER JOIN states ON Covid_Vaccination_By_Sex_And_Age.location = states.code
+    SET Covid_Vaccination_By_Sex_And_Age.location = states.name;
+
+UPDATE  Covid_Vaccination_By_Sex_And_Age
+    SET demographicCategory = REPLACE(demographicCategory,'Sex_Male','Male'),
+        demographicCategory = REPLACE(demographicCategory,'Sex_Female','Female');
+
 DROP TABLE IF EXISTS `ori_Covid_Vaccination_By_Sex_And_Age`;
 
