@@ -1,3 +1,5 @@
+USE `TripleThreat`;
+
 DROP VIEW IF EXISTS `usr`;
 
 CREATE VIEW usr AS
