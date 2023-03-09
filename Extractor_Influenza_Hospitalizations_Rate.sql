@@ -7,7 +7,7 @@ Ori_Influenza_cumulative_rate Char(10), Ori_Influenza_hospitalizations Char(10))
 
 describe Ori_Influenza_Hospitalizations_Rate;
 
-LOAD DATA INFILE 'C:\\ProgramData\\MySQL\\MySQL Server 8.0\\Uploads\\FluSurveillance.csv'
+LOAD DATA INFILE '/Users/liuboyao/Assignments23Spring/DataBase/A2/FluSurveillance.csv'
     INTO TABLE `Ori_Influenza_Hospitalizations_Rate`
     FIELDS TERMINATED BY ','
     OPTIONALLY ENCLOSED BY '"'
