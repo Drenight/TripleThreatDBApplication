@@ -3,6 +3,7 @@ import sys
 import os.path
 import re
 import base64
+from tabnanny import check
 import MySQLdb
 
 from graphviz import Digraph
@@ -14,10 +15,6 @@ import tornado.web
 
 from tornado.options import define, options
 define("port", default=8000, help="run on the given port", type=int)
-
-# TODO
-db = MySQLdb.connect("localhost", "username", "password", "TripleThreat", charset='utf8')
-
 
 #正在展示的文件名全局变量
 
@@ -97,12 +94,14 @@ def _sub_plot(g, tree, inc):
 class sqlCannedHandler(tornado.web.RequestHandler):
 	def post(self):
 		s = self.request.files
-		#s = self.request.arguments.keys()#["filexx"][0].encode('utf-8')
 		print(s)
+		cmd = s.get('filxx',[])[0].get('body')
+		print(checkMySql(cmd))
 
 class sqlPipeLineHandler(tornado.web.RequestHandler):
 	def get(self):
-		print(self.get_argument("input"))
+		query = self.get_argument("input")
+		print(checkMySql(query))
 
 class IndexHandler(tornado.web.RequestHandler):
 	def get(self):
@@ -297,8 +296,29 @@ class buildTreeHandler(tornado.web.RequestHandler):
 		f.close()
 		
 
+def checkMySqlFile(mySqlFile):
+    db = MySQLdb.connect("localhost", "username", "password", "TripleThreat", charset='utf8')
+    cs = db.cursor()
+    f = open(mySqlFile, encoding="utf-8")
+    mysql = f.read()
+    cs.execute(mysql)
+    f.close()
+    result = cs.fetchall()
+    for x in result:
+        f.write(x)
+    return result
+
+def checkMySql(mySqlText):
+    cs = db.cursor()
+    cs.execute(mySqlText)
+    result = cs.fetchall()
+    #for x in result:
+    #   print(x)
+    return result
+
 
 if __name__ == '__main__':
+	db = MySQLdb.connect("localhost", "COSC580_A2", "", "TripleThreat", charset='utf8')
 	tornado.options.parse_command_line()
 	app = tornado.web.Application(
 
@@ -317,23 +337,3 @@ if __name__ == '__main__':
 	http_server = tornado.httpserver.HTTPServer(app)
 	http_server.listen(options.port)
 	tornado.ioloop.IOLoop.instance().start()
-
-def checkMySqlFile(mySqlFile):
-    db = MySQLdb.connect("localhost", "username", "password", "TripleThreat", charset='utf8')
-    cs = db.cursor()
-    f = open(mySqlFile, encoding="utf-8")
-    mysql = f.read()
-    cs.execute(mysql)
-    f.close()
-    result = cs.fetchall()
-    for x in result:
-        f.write(x)
-    return output
-
-def checkMySql(mySqlText):
-    cs = db.cursor()
-    cs.execute(mySqlText)
-    result = cs.fetchall()
-    for x in result:
-        f.write(x)
-    return result
