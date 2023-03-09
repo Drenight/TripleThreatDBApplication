@@ -3,6 +3,7 @@ import sys
 import os.path
 import re
 import base64
+import MySQLdb
 
 from graphviz import Digraph
 
@@ -13,6 +14,10 @@ import tornado.web
 
 from tornado.options import define, options
 define("port", default=8000, help="run on the given port", type=int)
+
+# TODO
+db = MySQLdb.connect("localhost", "username", "password", "TripleThreat", charset='utf8')
+
 
 #正在展示的文件名全局变量
 
@@ -313,3 +318,22 @@ if __name__ == '__main__':
 	http_server.listen(options.port)
 	tornado.ioloop.IOLoop.instance().start()
 
+def checkMySqlFile(mySqlFile):
+    db = MySQLdb.connect("localhost", "username", "password", "TripleThreat", charset='utf8')
+    cs = db.cursor()
+    f = open(mySqlFile, encoding="utf-8")
+    mysql = f.read()
+    cs.execute(mysql)
+    f.close()
+    result = cs.fetchall()
+    for x in result:
+        f.write(x)
+    return output
+
+def checkMySql(mySqlText):
+    cs = db.cursor()
+    cs.execute(mySqlText)
+    result = cs.fetchall()
+    for x in result:
+        f.write(x)
+    return result
