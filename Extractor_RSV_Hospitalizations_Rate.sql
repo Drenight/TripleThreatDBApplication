@@ -6,7 +6,7 @@ CREATE TABLE `Ori_RSV_Hospitalizations_Rate`(state Char(30), season Char(10), we
 
 describe Ori_RSV_Hospitalizations_Rate;
 
-LOAD DATA INFILE 'C:\\ProgramData\\MySQL\\MySQL Server 8.0\\Uploads\\RSV_Rates_of_Laboratory-Confirmed.csv'
+LOAD DATA INFILE '/Users/liuboyao/Assignments23Spring/DataBase/A2/RSV_Rates_of_Laboratory-Confirmed.csv'
     INTO TABLE `Ori_RSV_Hospitalizations_Rate`
     FIELDS TERMINATED BY ','
     OPTIONALLY ENCLOSED BY '"'
