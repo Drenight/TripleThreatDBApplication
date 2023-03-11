@@ -1,4 +1,4 @@
 select * 
 from unified_view
 order by state
-limit 10
+limit 1000;
