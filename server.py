@@ -1,4 +1,5 @@
 #encoding: utf-8
+from fileinput import filename
 import sys
 import os.path
 import re
@@ -12,6 +13,9 @@ import tornado.httpserver
 import tornado.ioloop
 import tornado.options
 import tornado.web
+import csv
+import uuid
+import os
 
 from tornado.options import define, options
 define("port", default=8000, help="run on the given port", type=int)
@@ -93,15 +97,47 @@ def _sub_plot(g, tree, inc):
 
 class sqlCannedHandler(tornado.web.RequestHandler):
 	def post(self):
+		self.set_header('Content-Type', 'text/csv')
+		self.set_header('Content-Disposition', 'attachment; filename="file.csv"')
+
 		s = self.request.files
 		print(s)
 		cmd = s.get('filxx',[])[0].get('body')
-		print(checkMySql(cmd))
+		fileName = checkMySql(cmd)
+
+		cnt = 0
+		with open(fileName,'rb') as fp:
+			while True:
+				cnt+=1
+				data = fp.read(4096)
+				#print(data)
+				if not data:
+					break
+				self.write(data)
+		self.finish()
+		print("write done" + str(cnt))
+		os.remove(fileName)
 
 class sqlPipeLineHandler(tornado.web.RequestHandler):
 	def get(self):
-		query = self.get_argument("input")
-		print(checkMySql(query))
+		self.set_header('Content-Type', 'text/csv')
+		self.set_header('Content-Disposition', 'attachment; filename="file.csv"')
+
+		cmd = self.get_argument('arg')
+		fileName = checkMySql(cmd)
+
+		cnt = 0
+		with open(fileName,'rb') as fp:
+			while True:
+				cnt+=1
+				data = fp.read(4096)
+				#print(data)
+				if not data:
+					break
+				self.write(data)
+		self.finish()
+		print("write done" + str(cnt))
+		os.remove(fileName)
 
 class IndexHandler(tornado.web.RequestHandler):
 	def get(self):
@@ -309,12 +345,16 @@ def checkMySqlFile(mySqlFile):
     return result
 
 def checkMySql(mySqlText):
-    cs = db.cursor()
-    cs.execute(mySqlText)
-    result = cs.fetchall()
-    #for x in result:
-    #   print(x)
-    return result
+	cs = db.cursor()
+	cs.execute(mySqlText)
+	rows = [tuple([i[0] for i in cs.description],)]
+	rows += cs.fetchall()
+	fileName = "tmpQuery"+str(uuid.uuid4())+".csv"
+	fp = open(fileName, 'w')
+	myFile = csv.writer(fp)
+	myFile.writerows(rows)
+	fp.close()
+	return fileName
 
 
 if __name__ == '__main__':
