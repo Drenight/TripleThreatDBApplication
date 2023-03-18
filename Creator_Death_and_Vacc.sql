@@ -9,7 +9,3 @@ CREATE VIEW Death_and_Vacc AS
     LEFT JOIN Covid_Vaccination_By_Sex_And_Age AS b
     on a.endDate = b.date and a.sex = b.demographicCategory and a.state = b.location
     WHERE b.date >= "2020-12-31";
-
-DESCRIBE usr;
-
-select * from usr;

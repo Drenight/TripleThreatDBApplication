@@ -1,13 +1,7 @@
 #encoding: utf-8
-from fileinput import filename
-import sys
+from distutils.log import error
 import os.path
-import re
-import base64
-from tabnanny import check
 import MySQLdb
-
-from graphviz import Digraph
 
 import tornado.httpserver
 import tornado.ioloop
@@ -16,84 +10,10 @@ import tornado.web
 import csv
 import uuid
 import os
+import io
 
 from tornado.options import define, options
 define("port", default=8000, help="run on the given port", type=int)
-
-#正在展示的文件名全局变量
-
-#reload(sys)
-#sys.setdefaultencoding("utf-8")
-
-
-class Tree:		#{[(,,),()],[]}
-	root = 1
-	tree={}
-	nodeName={}		##########RelationType
-	treeStruct=""
-
-	def __init__(self):		
-		self.root=1
-		treeStruct=""
-		self.nodeName={}
-		self.tree={}
-
-	def __del__(self):
-		self.root=1
-		self.tree.clear()
-		self.nodeName.clear()
-		self.treeStruct=""
-
-	def addEdge(self,u,v,val,uname):
-		if u in self.tree:
-			self.tree[u].append(tuple((v,val)))
-			self.nodeName[u]=str(uname)
-		else:
-			self.tree.setdefault(u,[])
-			self.tree[u].append(tuple((v,val)))
-			self.nodeName[u]=str(uname)
-
-	def show(self,now):
-		if(now < 0): #####叶子
-			self.treeStruct+="\""+str(-now)+"\""
-			return
-		self.treeStruct+="{"+"\""+str(self.nodeName[now])+"\""	#{
-
-		self.treeStruct+=":{"		
-		for item in self.tree[now]:
-			newName=item[1]
-			self.treeStruct+=str(newName)+":"
-			self.show(int(item[0]))
-			if(item!=self.tree[now][-1]):
-				self.treeStruct+=","
-		self.treeStruct+="}"
-		self.treeStruct+="}"		#}
-
-
-def plot_model(tree, name):
-	g = Digraph("G", filename=name, format='png', strict=False)
-	first_label = list(tree.keys())[0]
-	g.node("0", first_label)
-	_sub_plot(g, tree, "0")
-	g.render(filename=name,directory=None,view=False,cleanup=False)
-#	g.view()
-
-root="0"
-
-def _sub_plot(g, tree, inc):
-    global root
-    first_label = list(tree.keys())[0]
-    ts = tree[first_label]
-    for i in ts.keys():
-        if isinstance(tree[first_label][i], dict):
-            root = str(int(root) + 1)
-            g.node(root, list(tree[first_label][i].keys())[0])
-            g.edge(inc, root, str(i))
-            _sub_plot(g, tree[first_label][i], root)
-        else:
-            root = str(int(root) + 1)
-            g.node(root, tree[first_label][i])
-            g.edge(inc, root, str(i))
 
 class sqlCannedHandler(tornado.web.RequestHandler):
 	def post(self):
@@ -103,7 +23,14 @@ class sqlCannedHandler(tornado.web.RequestHandler):
 		s = self.request.files
 		print(s)
 		cmd = s.get('filxx',[])[0].get('body')
-		fileName = checkMySql(cmd)
+		res, fileName = checkMySql(cmd)
+		if res == -1:
+			self.set_status(400)  # Bad Request
+			error_message = fileName
+			error_bytes = error_message.encode('utf-8')
+			stream = io.BytesIO(error_bytes)
+			self.write(stream.getvalue()) 
+			return
 
 		cnt = 0
 		with open(fileName,'rb') as fp:
@@ -124,7 +51,15 @@ class sqlPipeLineHandler(tornado.web.RequestHandler):
 		self.set_header('Content-Disposition', 'attachment; filename="file.csv"')
 
 		cmd = self.get_argument('arg')
-		fileName = checkMySql(cmd)
+		res, fileName = checkMySql(cmd)
+		if res == -1:
+			self.set_status(400)  # Bad Request
+			error_message = fileName
+			error_bytes = error_message.encode('utf-8')
+			stream = io.BytesIO(error_bytes)
+			self.write(stream.getvalue()) 
+			return
+
 		cnt = 0
 		with open(fileName,'rb') as fp:
 			while True:
@@ -142,212 +77,18 @@ class IndexHandler(tornado.web.RequestHandler):
 	def get(self):
 		self.render('index.html')
 
-class preFileCountHandler(tornado.web.RequestHandler):
-	def get(self):
-		prePath=os.getcwd()+"/pre"
-		preFileCnt=os.listdir(prePath)
-		self.write(str(preFileCnt))
-
-class tagFileCountHandler(tornado.web.RequestHandler):
-	def get(self):
-		dataPath=os.getcwd()+"/tag"
-		dataFileCnt=os.listdir(dataPath)
-		self.write(str(dataFileCnt))
-class dataFileCountHandler(tornado.web.RequestHandler):
-	def get(self):
-		dataPath=os.getcwd()+"/data"
-		dataFileCnt=os.listdir(dataPath)
-		dataFileCnt.sort()
-		self.write(str(dataFileCnt))
-
-class showFileHandler(tornado.web.RequestHandler):
-	def get(self):
-		dataPath=str(os.getcwd())+'/data/'
-		dataPath+=str(self.get_argument("message"))
-
-		f=open(dataPath,'r')
-		self.write(str(f.read()))
-		f.close()
-
-class tagSaveHandler(tornado.web.RequestHandler):
-	def post(self):
-
-		dataPath=str(os.getcwd())
-		dataPath+=str(self.get_argument("fileName"))
-
-		s=self.get_argument("ans")
-		ans=""
-#		ans="<RELATION>\n"
-#		print(s)
-		line_List=s.split("#")
-
-		
-		nodeCnt=self.get_argument("nodeCnt")
-
-		for line in line_List:
-			line=line[1:-1]
-			ans+="    <R "
-
-			kv_List=line.split(",")
-			for item in kv_List:
-#				print(item)
-				key=re.findall(r"\"" + "(.+?)" + "\"",item)[0]
-				val=re.findall(r"\""+"(.+?)"+"\"",item)[1]
-				
-				if(key=="_Function"):
-					key="Function"
-
-				if(key=="ID"):
-					if(int(val)==-1):
-						val=str(-1)
-					else:
-						val=str(int(nodeCnt)-int(val)+1)
-				if(key=="ParentId"):
-					val=str(int(nodeCnt)-int(val)+1)
-				
-				if(val=="null"):
-					val=""
-						
-				ans+=str(key)+"=\""+str(val)+"\" "
-			
-			ans+="/>"	
-			ans+="\n"
-#		ans+="</RELATION>"
-
-		with open(dataPath,'r',encoding='utf-8') as f1,open("%s.bak"%dataPath,'w',encoding='utf-8')as f2:
-			flag=0
-			for line in f1:
-				if(line.strip()=='</RELATION>'):
-					flag=0
-				if(flag):
-					continue
-				if(0==flag):
-					f2.write(line)
-				if(line.strip()=='<RELATION>'):
-					flag=1
-					f2.write(ans)
-
-			os.remove(dataPath)
-			os.rename("%s.bak"%dataPath,dataPath)
-#		f.write(ans)
-#		f.close()
-
-
-class buildTreeHandler(tornado.web.RequestHandler):
-	def get(self):
-		dataPath=str(os.getcwd())+'/data/'
-		dataPath+=str(self.get_argument("message"))
-		
-		f=open(dataPath,'r')
-		line=f.readline()
-		flag=0
-
-		tree=Tree()
-		vec=[]		
-
-		while line:
-			if(line.strip() == "</RELATION>"):
-				flag=0
-				break
-			
-			if(flag==1):
-				#relation标签内的一行，维护树结构
-				kv_List=line.split()
-
-				mp={}
-
-				for item in kv_List:
-					if(item=="<R" or item=="/>"):
-						continue
-					#print(item)
-					key=re.findall(r"(.+?)=",item)[0]
-					if(key=="ChildList"):
-						continue
-					val=re.findall("\""+"(.+?)"+"\"" ,item)[0]
-					mp[key]=val
-				
-				vec.append(mp)
-			
-			if(line.strip() == "<RELATION>"):
-				flag=1
-
-			line = f.readline()
-
-		#做个从值域到节点编号的映射，后面从父节点连接子节点的时候需要子节点编号
-		range2NodeID={}
-
-		mx=1
-		
-		#print(vec) 
-
-		for mp in vec:
-#print(mp)
-			lb=mp["ParagraphPosition"][0]
-			rb=mp["ParagraphPosition"][-1]
-			mx=max(mx,int(rb))
-			range2NodeID[tuple((lb,rb))]=mp["ID"]
-		#	print(str(lb)+"___"+str(rb)+"___"+str(range2NodeID[tuple((lb,rb))]))
-
-		for i in range(1,mx+1):
-			range2NodeID[tuple((str(i),str(i)))]=str(-i)
-
-		for mp in vec:
-			ss=mp["ParagraphPosition"].split("|")
-			sonCnt=0;
-			for son in ss:
-				#print(son)
-				lb=son[0]
-				rb=son[-1]
-				sonCnt+=1
-				u=int(mp["ID"])
-				v=int(range2NodeID[tuple((lb,rb))])
-				if(mp["Center"]=="3"):
-					tree.addEdge(u,v,sonCnt,mp["RelationType"])		#trick
-				elif(mp["Center"]=="1" and sonCnt==1):
-					tree.addEdge(u,v,1,mp["RelationType"])
-				elif(mp["Center"]=="2" and sonCnt==2):
-					tree.addEdge(u,v,1,mp["RelationType"])
-				else:
-					tree.addEdge(u,v,0,mp["RelationType"])
-
-		tree.show(1)
-#		print(tree.treeStruct)
-		tmp={}	
-		tmp=eval(tree.treeStruct)
-
-
-#		del tree
-
-#print(tmp)#----------------------------------------bug
-		ans="<RELATION>\n"
-		ans="<RELATION>\n"
-		ans="<RELATION>\n"
-		plot_model(tmp,"struct.gv")
-		with open("struct.gv.png","rb") as ff:
-			b64=base64.b64encode(ff.read())
-			s=b64.decode()
-		self.write(s)
-		ff.close()
-		f.close()
-		
-
-def checkMySqlFile(mySqlFile):
-    db = MySQLdb.connect("localhost", "username", "password", "TripleThreat", charset='utf8')
-    cs = db.cursor()
-    f = open(mySqlFile, encoding="utf-8")
-    mysql = f.read()
-    cs.execute(mysql)
-    f.close()
-    result = cs.fetchall()
-    for x in result:
-        f.write(x)
-    return result
-
 def checkMySql(mySqlText):
 	cs = db.cursor()
-	cs.execute(mySqlText)
-	rows = [tuple([i[0] for i in cs.description],)]
-	rows += cs.fetchall()
+	try:
+		cs.execute(mySqlText)
+		rows = [tuple([i[0] for i in cs.description],)]
+		rows += cs.fetchall()
+	except MySQLdb.Error as e:
+		error_msg = f"Invalid SQL query: {e}"
+		print(error_msg)
+    	# Return an HTTP response with the error message
+		return -1, error_msg
+
 	fileName = "tmpQuery"+str(uuid.uuid4())+".csv"
 	fp = open(fileName, 'w')
 	myFile = csv.writer(fp)
@@ -357,7 +98,7 @@ def checkMySql(mySqlText):
 
 	myFile.writerows(rows)
 	fp.close()
-	return fileName
+	return 0, fileName
 
 if __name__ == '__main__':
 	db = MySQLdb.connect("localhost", "COSC580_A2", "", "TripleThreat", charset='utf8')
@@ -366,11 +107,6 @@ if __name__ == '__main__':
 
 		handlers=[
 			(r'/', IndexHandler), 
-			(r'/dataFileCount',dataFileCountHandler),
-			(r'/tagFileCount',tagFileCountHandler),
-			(r'/showFile',showFileHandler),
-			(r'/buildTree',buildTreeHandler),
-			(r'/tagSave',tagSaveHandler),
 			(r'/sqlPipeLine',sqlPipeLineHandler),
 			(r'/sqlCanned',sqlCannedHandler),
 			],

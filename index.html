@@ -2,9 +2,7 @@
 <html>
     <head>
 		<title>Triple Threat Aggregation Query Application</title>
-		<script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
-		<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>	
-		    <!-- Loading Bootstrap -->
+		<script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>	
 			
 		<link href="{{static_url('css/vendor/bootstrap.min.css')}}" rel="stylesheet">
 	
@@ -14,12 +12,6 @@
 		<link rel="shortcut icon" href="{{static_url('favicon.ico')}}">
 		
 		<link rel="stylesheet" href="{{static_url('themes/default/style.min.css')}}" />
-	
-		<!-- HTML5 shim, for IE6-8 support of HTML5 elements. All other JS at the end of file. -->
-		<!--[if lt IE 9]>
-		  <script src="../../dist/js/vendor/html5shiv.js"></script>
-		  <script src="../../dist/js/vendor/respond.min.js"></script>
-		    <![endif]-->
 		
 		<style>
 		</style>
@@ -63,6 +55,15 @@
 	
 
 	<script>
+		function errorCallback(errorBlob) {
+			const url = URL.createObjectURL(errorBlob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = 'error.txt';
+			a.click();
+			URL.revokeObjectURL(url);
+		}
+
 		$("#submitQueries").click(function(){
 			var queries=$("#sqlQueries").val();
 			console.log(queries);
@@ -71,16 +72,21 @@
 			//xhr.open('GET', '/sqlPipeLine', true);
 			xhr.open('GET', '/sqlPipeLine?arg=' + encodeURIComponent(queries), true);
 			xhr.onreadystatechange = function(){
-				if(xhr.readyState == 4 && xhr.status == 200){
+				if(xhr.readyState == 4 /*&& xhr.status == 200*/){
 					let blob = xhr.response;
 					let url = URL.createObjectURL(blob);
 					let a = document.createElement('a');
 					a.href = url;
-					a.download = 'queryResult.csv';
+					if (xhr.status == 200){
+						a.download = 'queryResult.csv';
+					}else{
+						a.download = 'error.txt'
+					}
 					a.click();
 					URL.revokeObjectURL(url);
 				}
 			};
+
 			xhr.send();
 		});
 
@@ -96,12 +102,16 @@
 			//fd.append('xx', 'xx3');
 			xhr.open('POST', '/sqlCanned', true);
 			xhr.onreadystatechange = function(){
-				if (xhr.readyState == 4 && xhr.status == 200) {
+				if (xhr.readyState == 4 /*&& xhr.status == 200)*/) {
      				let blob = xhr.response;
 					let url = URL.createObjectURL(blob);
 					let a = document.createElement('a');
 					a.href = url;
-					a.download = 'queryResult.csv';
+					if (xhr.status == 200){
+						a.download = 'queryResult.csv';
+					}else{
+						a.download = 'error.txt'
+					}
 					a.click();
 					URL.revokeObjectURL(url);
     			}
