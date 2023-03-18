@@ -125,7 +125,6 @@ class sqlPipeLineHandler(tornado.web.RequestHandler):
 
 		cmd = self.get_argument('arg')
 		fileName = checkMySql(cmd)
-
 		cnt = 0
 		with open(fileName,'rb') as fp:
 			while True:
@@ -352,10 +351,13 @@ def checkMySql(mySqlText):
 	fileName = "tmpQuery"+str(uuid.uuid4())+".csv"
 	fp = open(fileName, 'w')
 	myFile = csv.writer(fp)
+	lstLen = len(rows)
+	lstLen = min(1000,lstLen)
+	rows = rows[:lstLen]
+
 	myFile.writerows(rows)
 	fp.close()
 	return fileName
-
 
 if __name__ == '__main__':
 	db = MySQLdb.connect("localhost", "COSC580_A2", "", "TripleThreat", charset='utf8')
