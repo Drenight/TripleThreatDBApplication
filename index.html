@@ -55,6 +55,15 @@
 	
 
 	<script>
+		function errorCallback(errorBlob) {
+			const url = URL.createObjectURL(errorBlob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = 'error.txt';
+			a.click();
+			URL.revokeObjectURL(url);
+		}
+
 		$("#submitQueries").click(function(){
 			var queries=$("#sqlQueries").val();
 			console.log(queries);
@@ -63,16 +72,21 @@
 			//xhr.open('GET', '/sqlPipeLine', true);
 			xhr.open('GET', '/sqlPipeLine?arg=' + encodeURIComponent(queries), true);
 			xhr.onreadystatechange = function(){
-				if(xhr.readyState == 4 && xhr.status == 200){
+				if(xhr.readyState == 4 /*&& xhr.status == 200*/){
 					let blob = xhr.response;
 					let url = URL.createObjectURL(blob);
 					let a = document.createElement('a');
 					a.href = url;
-					a.download = 'queryResult.csv';
+					if (xhr.status == 200){
+						a.download = 'queryResult.csv';
+					}else{
+						a.download = 'error.txt'
+					}
 					a.click();
 					URL.revokeObjectURL(url);
 				}
 			};
+
 			xhr.send();
 		});
 
@@ -88,12 +102,16 @@
 			//fd.append('xx', 'xx3');
 			xhr.open('POST', '/sqlCanned', true);
 			xhr.onreadystatechange = function(){
-				if (xhr.readyState == 4 && xhr.status == 200) {
+				if (xhr.readyState == 4 /*&& xhr.status == 200)*/) {
      				let blob = xhr.response;
 					let url = URL.createObjectURL(blob);
 					let a = document.createElement('a');
 					a.href = url;
-					a.download = 'queryResult.csv';
+					if (xhr.status == 200){
+						a.download = 'queryResult.csv';
+					}else{
+						a.download = 'error.txt'
+					}
 					a.click();
 					URL.revokeObjectURL(url);
     			}
