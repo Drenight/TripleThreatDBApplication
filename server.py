@@ -125,7 +125,6 @@ class sqlPipeLineHandler(tornado.web.RequestHandler):
 
 		cmd = self.get_argument('arg')
 		fileName = checkMySql(cmd)
-
 		cnt = 0
 		with open(fileName,'rb') as fp:
 			while True:
@@ -337,7 +336,7 @@ def checkMySqlFile(mySqlFile):
     cs = db.cursor()
     f = open(mySqlFile, encoding="utf-8")
     mysql = f.read()
-    cs.execute(limitSql(mysql))
+    cs.execute(mysql)
     f.close()
     result = cs.fetchall()
     for x in result:
@@ -346,29 +345,19 @@ def checkMySqlFile(mySqlFile):
 
 def checkMySql(mySqlText):
 	cs = db.cursor()
-	cs.execute(limitSql(mySqlText))
+	cs.execute(mySqlText)
 	rows = [tuple([i[0] for i in cs.description],)]
 	rows += cs.fetchall()
 	fileName = "tmpQuery"+str(uuid.uuid4())+".csv"
 	fp = open(fileName, 'w')
 	myFile = csv.writer(fp)
+	lstLen = len(rows)
+	lstLen = min(1000,lstLen)
+	rows = rows[:lstLen]
+
 	myFile.writerows(rows)
 	fp.close()
 	return fileName
-
-def limitSql(mysql):
-    p_limit = mysql.casefold().find("limit")
-    p_end = mysql.find(";")
-    if p_limit > 0:
-        num_limit = int(mysql[p_limit:p_end].split(" ")[1])
-    if p_limit > 0:
-        if num_limit > 1000:
-            mysql = mysql[:p_limit:]
-            mysql += " limit 1000;"
-    else:
-        mysql = mysql[:p_end:]
-        mysql += " limit 1000;"
-    return mysql
 
 if __name__ == '__main__':
 	db = MySQLdb.connect("localhost", "COSC580_A2", "", "TripleThreat", charset='utf8')
